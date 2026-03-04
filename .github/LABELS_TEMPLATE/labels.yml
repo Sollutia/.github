@@ -1,0 +1,15 @@
+- name: 🐛 bug
+  color: f0cc75
+  description: Algo no funciona
+
+- name: ✨ feature
+  color: 121212
+  description: Nueva funcionalidad
+
+- name: 📩 client-request
+  color: 1d76db
+  description: Cambios solicitados por cliente
+
+- name: 🔥 urgent
+  color: 9b1a10
+  description: Trabajo urgente
