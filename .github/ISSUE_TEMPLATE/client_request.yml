@@ -53,7 +53,7 @@ body:
     attributes:
       label: Prioridad
       options:
-        - 🔴 Urgente
+        - 🔴 Urgente (lo perdemos como cliente)
         - 🟠 Alta
         - 🟡 Normal
         - 🟢 Baja

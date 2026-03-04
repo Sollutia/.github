@@ -69,14 +69,14 @@ body:
       required: true
 
   - type: dropdown
-    id: severity
+    id: priority
     attributes:
-      label: Severidad
+      label: Prioridad
       description: Indica el impacto del bug.
       options:
-        - 🔴 Crítica (bloquea funcionalidad)
+        - 🔴 Urgente (bloquea funcionalidad)
         - 🟠 Alta
-        - 🟡 Media
+        - 🟡 Normal
         - 🟢 Baja
     validations:
       required: true

@@ -1,0 +1,71 @@
+name: ✨ Feature request
+description: Propuesta de nueva funcionalidad o mejora
+title: "[FEATURE] "
+labels: ["feature"]
+
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Nueva funcionalidad / mejora
+
+        Describe la funcionalidad que se quiere añadir o mejorar.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema que se quiere resolver
+      description: ¿Qué problema existe actualmente?
+      placeholder: |
+        Ejemplo:
+        Actualmente no se puede exportar los datos en Excel.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solución propuesta
+      description: Describe cómo debería funcionar la nueva funcionalidad.
+      placeholder: |
+        Ejemplo:
+        Añadir un botón "Exportar a Excel" en la sección de informes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Otras soluciones posibles (si existen)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Información adicional
+      description: Capturas, enlaces o contexto adicional
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      options:
+        - 🔴 Urgente (espabila)
+        - 🟠 Alta
+        - 🟡 Normal
+        - 🟢 Baja
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Esfuerzo estimado
+      options:
+        - 30 min
+        - 1h
+        - 2h
+        - 4h
+        - 1 día
+        - "> 1 día"
