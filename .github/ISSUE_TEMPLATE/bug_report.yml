@@ -6,9 +6,10 @@ body:
   - type: markdown
     attributes:
       value: |
+        ###
         ## 🐛 Reporte de Bug
         Describe el problema con el mayor detalle posible.
-        # 
+        ###
 
   - type: textarea
     id: description
