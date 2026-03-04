@@ -8,9 +8,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Nueva funcionalidad / mejora
+        ###
+        ___
+        # ✨  Nueva funcionalidad / mejora 
         Describe la funcionalidad que se quiere añadir o mejorar.
-
+        ___
+        ###
+        
   - type: textarea
     id: problem
     attributes:
