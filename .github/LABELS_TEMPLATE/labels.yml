@@ -13,3 +13,7 @@
 - name: 🔥 urgent
   color: 9b1a10
   description: Trabajo urgente
+
+- name: ⌛ someday
+  color: ffffff
+  description: Idea para que no se olvide, pero todavía no hay que ejecutarla
