@@ -1,0 +1,83 @@
+name: 📩 Client request
+description: Cambios o ajustes solicitados por el cliente
+title: "[CLIENT] "
+labels: ["client-request"]
+
+body:
+
+  - type: input
+    id: date
+    attributes:
+      label: Fecha
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+
+  - type: textarea
+    id: original_request
+    attributes:
+      label: Email / petición original del cliente
+      description: Copia aquí el email o mensaje recibido
+      placeholder: |
+        Pegar aquí el email del cliente...
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tareas a realizar
+      description: Divide la petición en tareas
+      placeholder: |
+        ### Cabecera
+        - [ ] Añadir espacio gestionable para banners en cabecera
+
+        ### Lateral
+        - [ ] Añadir espacio gestionable para banners lateral responsive
+
+        ### Fitxa article
+        - [ ] Cambiar texto "View PDF in english" → "View PDF in spanish"
+        - [ ] Añadir campos:
+            - fecha_recibido
+            - fecha_aceptado
+
+        ### Autores
+        - [ ] Nombre en negrita
+        - [ ] Link solo en icono
+        - [ ] Icono después del nombre
+
+        ### Archivo
+        - [ ] Ajustar maquetación para evitar huecos
+
+        ### Exportación
+        - [ ] Exportar números en Excel
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      options:
+        - 🔴 Urgente
+        - 🟠 Alta
+        - 🟡 Normal
+        - 🟢 Baja
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Esfuerzo estimado
+      options:
+        - 15 min
+        - 30 min
+        - 1h
+        - 2h
+        - 4h
+        - > 1 día
+
+  - type: checkboxes
+    id: billing
+    attributes:
+      label: Facturación
+      options:
+        - label: Trabajo facturable
+        - label: Incluido en mantenimiento
