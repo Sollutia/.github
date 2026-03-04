@@ -3,6 +3,17 @@ description: Cambios o ajustes solicitados por el cliente
 title: "[CLIENT] "
 labels: ["client-request"]
 body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ###
+        ___
+        # 📩 Petición del cliente 
+        Cambios o ajustes solicitados por el cliente.
+        ___
+        ###
+
   - type: input
     id: date
     attributes:
