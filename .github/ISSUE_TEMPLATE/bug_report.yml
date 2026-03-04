@@ -11,6 +11,7 @@ body:
         > # 🐛 Reporte de Bug
         > Describe el problema con el mayor detalle posible.
         ___
+        ###
 
   - type: textarea
     id: description
