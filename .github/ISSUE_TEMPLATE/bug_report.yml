@@ -8,8 +8,8 @@ body:
       value: |
         ###
         ___
-        > # 🐛 Reporte de Bug
-        > Describe el problema con el mayor detalle posible.
+        # 🐛 Reporte de bug
+        Describe el problema con el mayor detalle posible.
         ___
         ###
 
