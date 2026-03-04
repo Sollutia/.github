@@ -9,7 +9,6 @@ body:
     attributes:
       value: |
         ## Nueva funcionalidad / mejora
-
         Describe la funcionalidad que se quiere añadir o mejorar.
 
   - type: textarea
@@ -61,11 +60,12 @@ body:
   - type: dropdown
     id: effort
     attributes:
-      label: Esfuerzo estimado
+      label: Tiempo estimado
       options:
+        - 15 min
         - 30 min
         - 1h
         - 2h
         - 4h
-        - 1 día
-        - "> 1 día"
+        - 8h
+        - "+ 8h"
