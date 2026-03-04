@@ -1,63 +1,182 @@
-name: Reset labels (central)
+name: Sync labels (central)
 
 on:
   workflow_call:
     inputs:
-      labels_url:
+      labels_source:
+        description: "Raw URL o ruta local al manifiesto de labels (YAML)."
         required: false
         type: string
-        default: "https://raw.githubusercontent.com/ORG/.github/main/labels/labels.yml"
+        default: ""
+      prune_extra:
+        description: "Elimina labels del repositorio que no esten en el manifiesto."
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: "Muestra cambios sin aplicarlos."
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      labels_source:
+        description: "Raw URL o ruta local al manifiesto de labels (YAML)."
+        required: false
+        type: string
+        default: ""
+      prune_extra:
+        description: "Elimina labels del repositorio que no esten en el manifiesto."
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: "Muestra cambios sin aplicarlos."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
+  contents: read
   issues: write
 
 jobs:
-  reset:
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Download labels manifest
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve and fetch labels manifest
+        env:
+          INPUT_SOURCE: ${{ inputs.labels_source }}
         run: |
-          curl -fsSL "${{ inputs.labels_url }}" -o labels.yml
+          set -euo pipefail
 
-      - name: Reset labels (delete all)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const labels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
-            for (const l of labels) {
-              try {
-                await github.rest.issues.deleteLabel({ owner, repo, name: l.name });
-                core.info(`Deleted: ${l.name}`);
-              } catch (e) {
-                core.warning(`Can't delete "${l.name}": ${e.message}`);
-              }
-            }
+          source="${INPUT_SOURCE}"
+          if [ -z "$source" ]; then
+            source="https://raw.githubusercontent.com/${GITHUB_REPOSITORY_OWNER}/.github/main/.github/LABELS_TEMPLATE/labels.yml"
+          fi
 
-      - name: Create labels from YAML
+          if [[ "$source" =~ ^https?:// ]]; then
+            echo "Using remote labels source: $source"
+            curl -fsSL "$source" -o labels.yml
+          else
+            echo "Using local labels source: $source"
+            test -f "$source"
+            cp "$source" labels.yml
+          fi
+
+      - name: Validate and normalize labels manifest
+        run: |
+          set -euo pipefail
+          ruby <<'RUBY' > labels.json
+          require "yaml"
+          require "json"
+
+          raw = YAML.safe_load(File.read("labels.yml"), permitted_classes: [], aliases: false)
+          abort("labels.yml must contain a top-level array") unless raw.is_a?(Array)
+
+          labels = raw.map.with_index(1) do |item, idx|
+            abort("Item ##{idx} must be an object") unless item.is_a?(Hash)
+
+            name = item["name"]&.to_s&.strip
+            abort("Item ##{idx}: name is required") if name.nil? || name.empty?
+            abort("Item ##{idx}: name must be <= 50 chars") if name.length > 50
+
+            color = item["color"]&.to_s&.strip&.sub(/^#/, "")&.downcase
+            abort("Item ##{idx}: color must be 6 hex chars") unless /\A[0-9a-f]{6}\z/.match?(color.to_s)
+
+            description = item["description"] ? item["description"].to_s.strip : ""
+            abort("Item ##{idx}: description must be <= 100 chars") if description.length > 100
+
+            { "name" => name, "color" => color, "description" => description }
+          end
+
+          abort("labels.yml is empty; refusing to continue") if labels.empty?
+          puts JSON.pretty_generate(labels)
+          RUBY
+
+      - name: Sync labels
         uses: actions/github-script@v7
+        env:
+          PRUNE_EXTRA: ${{ inputs.prune_extra }}
+          DRY_RUN: ${{ inputs.dry_run }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
-            const content = fs.readFileSync("labels.yml", "utf8");
-            const blocks = content.split("\n- ").map((b, i) => i === 0 ? b.trim() : "- " + b.trim()).filter(Boolean);
-
-            function getField(block, field) {
-              const re = new RegExp(`\\b${field}:\\s*["']?(.+?)["']?\\s*$`, "m");
-              const m = block.match(re);
-              return m ? m[1].trim() : null;
-            }
-
             const { owner, repo } = context.repo;
-            const labels = blocks.map(b => ({
-              name: getField(b, "name"),
-              color: (getField(b, "color") || "").replace("#",""),
-              description: getField(b, "description") || ""
-            })).filter(l => l.name && l.color);
+            const prune = String(process.env.PRUNE_EXTRA).toLowerCase() === "true";
+            const dryRun = String(process.env.DRY_RUN).toLowerCase() === "true";
+            const desired = JSON.parse(fs.readFileSync("labels.json", "utf8"));
 
-            for (const l of labels) {
-              await github.rest.issues.createLabel({ owner, repo, ...l });
-              core.info(`Created: ${l.name}`);
+            const existing = await github.paginate(
+              github.rest.issues.listLabelsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+
+            const existingByName = new Map(existing.map((l) => [l.name, l]));
+            const desiredByName = new Map(desired.map((l) => [l.name, l]));
+
+            const stats = { created: 0, updated: 0, unchanged: 0, deleted: 0 };
+
+            for (const label of desired) {
+              const current = existingByName.get(label.name);
+
+              if (!current) {
+                if (dryRun) {
+                  core.info(`[dry-run] Create: ${label.name}`);
+                } else {
+                  await github.rest.issues.createLabel({ owner, repo, ...label });
+                  core.info(`Created: ${label.name}`);
+                }
+                stats.created += 1;
+                continue;
+              }
+
+              const sameColor = (current.color || "").toLowerCase() === label.color.toLowerCase();
+              const sameDescription = (current.description || "").trim() === (label.description || "").trim();
+
+              if (sameColor && sameDescription) {
+                stats.unchanged += 1;
+                continue;
+              }
+
+              if (dryRun) {
+                core.info(`[dry-run] Update: ${label.name}`);
+              } else {
+                await github.rest.issues.updateLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                core.info(`Updated: ${label.name}`);
+              }
+              stats.updated += 1;
             }
+
+            if (prune) {
+              for (const label of existing) {
+                if (desiredByName.has(label.name)) continue;
+                if (dryRun) {
+                  core.info(`[dry-run] Delete: ${label.name}`);
+                  stats.deleted += 1;
+                  continue;
+                }
+
+                try {
+                  await github.rest.issues.deleteLabel({ owner, repo, name: label.name });
+                  core.info(`Deleted: ${label.name}`);
+                  stats.deleted += 1;
+                } catch (e) {
+                  core.warning(`Cannot delete "${label.name}": ${e.message}`);
+                }
+              }
+            }
+
+            core.notice(
+              `Summary -> created: ${stats.created}, updated: ${stats.updated}, unchanged: ${stats.unchanged}, deleted: ${stats.deleted}, prune_extra: ${prune}, dry_run: ${dryRun}`
+            );
