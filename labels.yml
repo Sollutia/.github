@@ -1,0 +1,19 @@
+- name: bug
+  color: d73a4a
+  description: Algo no funciona
+
+- name: feature
+  color: 7057ff
+  description: Nueva funcionalidad
+
+- name: client-request
+  color: 1d76db
+  description: Cambios solicitados por cliente
+
+- name: urgent
+  color: b60205
+  description: Trabajo urgente
+
+- name: maintenance
+  color: 0e8a16
+  description: Mantenimiento técnico
