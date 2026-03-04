@@ -1,0 +1,275 @@
+name: Bulk sync labels (org)
+
+on:
+  workflow_dispatch:
+    inputs:
+      org:
+        description: "Organizacion objetivo."
+        required: true
+        type: string
+        default: "Sollutia"
+      labels_source:
+        description: "Raw URL o ruta local al manifiesto YAML."
+        required: false
+        type: string
+        default: ".github/LABELS_TEMPLATE/labels.yml"
+      dry_run:
+        description: "Solo muestra cambios, sin aplicarlos."
+        required: false
+        type: boolean
+        default: true
+      prune_extra:
+        description: "Elimina labels que no esten en el manifiesto."
+        required: false
+        type: boolean
+        default: true
+      include_archived:
+        description: "Incluye repos archivados."
+        required: false
+        type: boolean
+        default: false
+      include_forks:
+        description: "Incluye forks."
+        required: false
+        type: boolean
+        default: false
+      repo_name_filter:
+        description: "Filtro por nombre de repo (substring). Vacio = todos."
+        required: false
+        type: string
+        default: ""
+      fail_on_error:
+        description: "Marca fallo si algun repo da error."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  bulk-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure token exists
+        env:
+          ORG_LABELS_TOKEN: ${{ secrets.ORG_LABELS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ORG_LABELS_TOKEN}" ]; then
+            echo "Missing secret ORG_LABELS_TOKEN in this repository."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve and fetch labels manifest
+        env:
+          INPUT_SOURCE: ${{ inputs.labels_source }}
+        run: |
+          set -euo pipefail
+
+          source="${INPUT_SOURCE}"
+          if [ -z "$source" ]; then
+            source=".github/LABELS_TEMPLATE/labels.yml"
+          fi
+
+          if [[ "$source" =~ ^https?:// ]]; then
+            echo "Using remote labels source: $source"
+            curl -fsSL "$source" -o labels.yml
+          else
+            echo "Using local labels source: $source"
+            test -f "$source"
+            cp "$source" labels.yml
+          fi
+
+      - name: Validate and normalize labels manifest
+        run: |
+          set -euo pipefail
+          ruby <<'RUBY' > labels.json
+          require "yaml"
+          require "json"
+
+          raw = YAML.safe_load(File.read("labels.yml"), permitted_classes: [], aliases: false)
+          abort("labels.yml must contain a top-level array") unless raw.is_a?(Array)
+
+          labels = raw.map.with_index(1) do |item, idx|
+            abort("Item ##{idx} must be an object") unless item.is_a?(Hash)
+
+            name = item["name"]&.to_s&.strip
+            abort("Item ##{idx}: name is required") if name.nil? || name.empty?
+            abort("Item ##{idx}: name must be <= 50 chars") if name.length > 50
+
+            color = item["color"]&.to_s&.strip&.sub(/^#/, "")&.downcase
+            abort("Item ##{idx}: color must be 6 hex chars") unless /\A[0-9a-f]{6}\z/.match?(color.to_s)
+
+            description = item["description"] ? item["description"].to_s.strip : ""
+            abort("Item ##{idx}: description must be <= 100 chars") if description.length > 100
+
+            { "name" => name, "color" => color, "description" => description }
+          end
+
+          abort("labels.yml is empty; refusing to continue") if labels.empty?
+          puts JSON.pretty_generate(labels)
+          RUBY
+
+      - name: Build target repository list
+        id: repos
+        uses: actions/github-script@v7
+        env:
+          ORG: ${{ inputs.org }}
+          INCLUDE_ARCHIVED: ${{ inputs.include_archived }}
+          INCLUDE_FORKS: ${{ inputs.include_forks }}
+          REPO_NAME_FILTER: ${{ inputs.repo_name_filter }}
+        with:
+          github-token: ${{ secrets.ORG_LABELS_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const org = process.env.ORG;
+            const includeArchived = String(process.env.INCLUDE_ARCHIVED).toLowerCase() === "true";
+            const includeForks = String(process.env.INCLUDE_FORKS).toLowerCase() === "true";
+            const repoFilter = (process.env.REPO_NAME_FILTER || "").trim().toLowerCase();
+
+            const allRepos = await github.paginate(
+              github.rest.repos.listForOrg,
+              { org, type: "all", per_page: 100 }
+            );
+
+            const filtered = allRepos
+              .filter((r) => includeArchived || !r.archived)
+              .filter((r) => includeForks || !r.fork)
+              .filter((r) => (repoFilter ? r.name.toLowerCase().includes(repoFilter) : true))
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((r) => r.name);
+
+            fs.writeFileSync("repos.json", JSON.stringify(filtered, null, 2));
+
+            core.setOutput("filtered_count", String(filtered.length));
+            core.setOutput("selected_count", String(filtered.length));
+
+            core.notice(
+              `Org ${org}: selected=${filtered.length} repos in one run`
+            );
+
+            if (filtered.length === 0) {
+              core.warning("No repositories selected.");
+            }
+
+      - name: Sync labels across selected repositories
+        uses: actions/github-script@v7
+        env:
+          ORG: ${{ inputs.org }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PRUNE_EXTRA: ${{ inputs.prune_extra }}
+          FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+        with:
+          github-token: ${{ secrets.ORG_LABELS_TOKEN }}
+          script: |
+            const fs = require("fs");
+
+            const org = process.env.ORG;
+            const dryRun = String(process.env.DRY_RUN).toLowerCase() === "true";
+            const prune = String(process.env.PRUNE_EXTRA).toLowerCase() === "true";
+            const failOnError = String(process.env.FAIL_ON_ERROR).toLowerCase() === "true";
+
+            const labels = JSON.parse(fs.readFileSync("labels.json", "utf8"));
+            const repos = JSON.parse(fs.readFileSync("repos.json", "utf8"));
+
+            const totals = { repos: repos.length, created: 0, updated: 0, unchanged: 0, deleted: 0, failed: 0 };
+            const failures = [];
+            const perRepo = [];
+
+            for (const repo of repos) {
+              const stats = { repo, created: 0, updated: 0, unchanged: 0, deleted: 0 };
+              try {
+                const existing = await github.paginate(
+                  github.rest.issues.listLabelsForRepo,
+                  { owner: org, repo, per_page: 100 }
+                );
+
+                const existingByName = new Map(existing.map((l) => [l.name, l]));
+                const desiredByName = new Map(labels.map((l) => [l.name, l]));
+
+                for (const label of labels) {
+                  const current = existingByName.get(label.name);
+                  if (!current) {
+                    if (!dryRun) {
+                      await github.rest.issues.createLabel({ owner: org, repo, ...label });
+                    }
+                    stats.created += 1;
+                    continue;
+                  }
+
+                  const sameColor = (current.color || "").toLowerCase() === label.color.toLowerCase();
+                  const sameDescription = (current.description || "").trim() === (label.description || "").trim();
+                  if (sameColor && sameDescription) {
+                    stats.unchanged += 1;
+                    continue;
+                  }
+
+                  if (!dryRun) {
+                    await github.rest.issues.updateLabel({
+                      owner: org,
+                      repo,
+                      name: label.name,
+                      color: label.color,
+                      description: label.description,
+                    });
+                  }
+                  stats.updated += 1;
+                }
+
+                if (prune) {
+                  for (const label of existing) {
+                    if (desiredByName.has(label.name)) continue;
+                    if (!dryRun) {
+                      await github.rest.issues.deleteLabel({ owner: org, repo, name: label.name });
+                    }
+                    stats.deleted += 1;
+                  }
+                }
+
+                totals.created += stats.created;
+                totals.updated += stats.updated;
+                totals.unchanged += stats.unchanged;
+                totals.deleted += stats.deleted;
+                perRepo.push(stats);
+
+                core.info(
+                  `[${repo}] created=${stats.created}, updated=${stats.updated}, unchanged=${stats.unchanged}, deleted=${stats.deleted}`
+                );
+              } catch (e) {
+                totals.failed += 1;
+                failures.push({ repo, message: e.message, status: e.status || null });
+                core.warning(`[${repo}] ERROR: ${e.message}`);
+              }
+            }
+
+            const report = {
+              org,
+              dry_run: dryRun,
+              prune_extra: prune,
+              generated_at: new Date().toISOString(),
+              totals,
+              failures,
+              repositories: perRepo,
+            };
+            fs.writeFileSync("bulk-sync-report.json", JSON.stringify(report, null, 2));
+
+            core.notice(
+              `Done. repos=${totals.repos}, failed=${totals.failed}, created=${totals.created}, updated=${totals.updated}, unchanged=${totals.unchanged}, deleted=${totals.deleted}, dry_run=${dryRun}`
+            );
+
+            if (failOnError && totals.failed > 0) {
+              core.setFailed(`${totals.failed} repository(ies) failed.`);
+            }
+
+      - name: Upload sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bulk-sync-report
+          path: bulk-sync-report.json
+          if-no-files-found: warn
