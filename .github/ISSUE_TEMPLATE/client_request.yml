@@ -2,9 +2,7 @@ name: 📩 Client request
 description: Cambios o ajustes solicitados por el cliente
 title: "[CLIENT] "
 labels: ["client-request"]
-
 body:
-
   - type: input
     id: date
     attributes:
@@ -72,7 +70,6 @@ body:
         - 1h
         - 2h
         - 4h
-        - > 1 día
 
   - type: checkboxes
     id: billing
