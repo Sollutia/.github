@@ -1,3 +1,7 @@
+- name: 🛠️ ajustos
+  color: d4ff35
+  description: Ajustos
+
 - name: 🐛 bug
   color: f0cc75
   description: Algo no funciona
