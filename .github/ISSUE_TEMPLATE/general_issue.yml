@@ -14,7 +14,7 @@ body:
         ___
         ###
 
-  - type: text
+  - type: input
     id: date
     attributes:
       label: Data
