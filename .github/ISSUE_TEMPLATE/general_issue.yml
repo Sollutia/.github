@@ -41,18 +41,6 @@ body:
             - fecha_aceptado
 
   - type: dropdown
-    id: priority
-    attributes:
-      label: Prioridad
-      options:
-        - 🔴 Urgente (lo perdemos como cliente)
-        - 🟠 Alta
-        - 🟡 Normal
-        - 🟢 Baja
-    validations:
-      required: true
-
-  - type: dropdown
     id: effort
     attributes:
       label: Temps previst

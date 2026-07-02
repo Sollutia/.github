@@ -49,17 +49,6 @@ body:
       label: Información adicional
       description: Capturas, enlaces o contexto adicional
 
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Prioridad
-      options:
-        - 🔴 Urgente (espabila)
-        - 🟠 Alta
-        - 🟡 Normal
-        - 🟢 Baja
-    validations:
-      required: true
 
   - type: dropdown
     id: effort

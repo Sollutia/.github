@@ -72,18 +72,6 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Prioridad
-      description: Indica el impacto del bug.
-      options:
-        - 🔴 Urgente (bloquea funcionalidad)
-        - 🟠 Alta
-        - 🟡 Normal
-        - 🟢 Baja
-    validations:
-      required: true
 
   - type: checkboxes
     id: terms
