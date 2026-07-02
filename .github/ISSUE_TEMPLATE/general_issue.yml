@@ -4,17 +4,7 @@ title: "[AJUSTOS] "
 labels: ["🛠️ ajustos-millores"]
 body:
 
-  - type: markdown
-    attributes:
-      value: |
-        ###
-        ___
-        # 🛠️ Ajustos i millores
-        Apanyos genèrics que ens trobem pel camí
-        ___
-        ###
-
-  - type: input
+   - type: input
     id: date
     attributes:
       label: Data
@@ -30,15 +20,6 @@ body:
       placeholder: |
         ## Cabecera
         - [ ] Añadir espacio gestionable para banners en cabecera
-
-        ## Lateral
-        - [ ] Añadir espacio gestionable para banners lateral responsive
-
-        ## Fitxa article
-        - [ ] Cambiar texto "View PDF in english" → "View PDF in spanish"
-        - [ ] Añadir campos:
-            - fecha_recibido
-            - fecha_aceptado
 
   - type: dropdown
     id: effort

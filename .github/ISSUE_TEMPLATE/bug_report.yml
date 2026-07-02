@@ -3,16 +3,6 @@ description: Reportar un error o comportamiento inesperado
 title: "[BUG] "
 labels: ["🐛 bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ###
-        ___
-        # 🐛 Reporte de bug
-        Describe el problema con el mayor detalle posible.
-        ___
-        ###
-
   - type: textarea
     id: description
     attributes:
