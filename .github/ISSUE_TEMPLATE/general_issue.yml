@@ -1,0 +1,75 @@
+name: 🛠️ Ajustos i millores
+description: Apanyos genèrics que ens trobem pel camí
+title: "[AJUSTOS] "
+labels: ["🛠️ ajustos-millores"]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ###
+        ___
+        # 🛠️ Ajustos i millores
+        Apanyos genèrics que ens trobem pel camí
+        ___
+        ###
+
+  - type: date
+    id: date
+    attributes:
+      label: Data
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasques
+      description: Com va dir Jack el Desembudellador...
+      placeholder: |
+        ## Cabecera
+        - [ ] Añadir espacio gestionable para banners en cabecera
+
+        ## Lateral
+        - [ ] Añadir espacio gestionable para banners lateral responsive
+
+        ## Fitxa article
+        - [ ] Cambiar texto "View PDF in english" → "View PDF in spanish"
+        - [ ] Añadir campos:
+            - fecha_recibido
+            - fecha_aceptado
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      options:
+        - 🔴 Urgente (lo perdemos como cliente)
+        - 🟠 Alta
+        - 🟡 Normal
+        - 🟢 Baja
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Temps previst
+      options:
+        - 10 min
+        - 15 min
+        - 30 min
+        - 1h
+        - 2h
+        - 4h
+        - 8h
+        - "+ 8h (10 minuts comercials)"
+
+  - type: checkboxes
+    id: billing
+    attributes:
+      label: Facturación
+      options:
+        - label: Facturable
+        - label: Correcció
