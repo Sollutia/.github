@@ -14,10 +14,24 @@
   color: 1d76db
   description: Cambios solicitados por cliente
 
-- name: 🔥 urgent
-  color: 9b1a10
-  description: Trabajo urgente
+# PRIORIDADES
 
-- name: ⌛ someday
-  color: ffffff
-  description: Idea para que no se olvide, pero todavía no hay que ejecutarla
+- name: 🔴 critical
+  color: DC2626
+  description: Bloquea funcionalidad o requiere atención inmediata
+
+- name: 🟠 high
+  color: F97316
+  description: Importante y debe abordarse próximamente
+
+- name: 🟡 normal
+  color: EAB308
+  description: Prioridad normal
+
+- name: 🟢 low
+  color: 22C55E
+  description: Mejora no prioritaria
+
+- name: 🔵 future
+  color: 3B82F6
+  description: Idea o funcionalidad para una fase futura
